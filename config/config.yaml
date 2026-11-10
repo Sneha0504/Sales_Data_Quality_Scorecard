@@ -9,6 +9,8 @@ paths:
   curated_dir: data/curated
   rule_catalog: rules/rule_catalog.yaml
   data_quality_report: docs/data_quality_report.md
+  # Self-contained Plotly dashboard published via GitHub Pages (/docs_site).
+  dashboard_html: docs_site/index.html
 
 load:
   sheet_names:
@@ -32,6 +34,9 @@ curate:
 
 outputs:
   transactions_csv: transactions.csv
+  # Aggregated monthly summary written alongside the compressed transactions file
+  # when the uncompressed CSV would exceed `transactions_csv_max_mb`.
+  transactions_monthly_summary_csv: transactions_monthly_summary.csv
   rule_results_csv: rule_results.csv
   reconciliation_csv: reconciliation.csv
   failure_trend_csv: failure_trend.csv

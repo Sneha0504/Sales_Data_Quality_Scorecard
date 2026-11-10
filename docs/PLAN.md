@@ -1,4 +1,4 @@
-# PLAN — Sales_Data_Quality_Scorecard
+# PLAN - Sales_Data_Quality_Scorecard
 
 Internal planning document. Not linked from the public README.
 
@@ -16,28 +16,28 @@ was changed and why.
 2. Can the rule catalog live entirely in a readable file (YAML), separate from
    the pipeline code, so rules can be added/changed without editing Python?
 3. After cleaning, how much do the headline numbers (revenue, orders, customers)
-   move between raw and curated — stated in dollars and percent, not hidden?
+   move between raw and curated - stated in pounds and percent, not hidden?
 4. Is every curated field documented well enough to use without asking anyone?
 
 ## 2. The data and why it fits
 
-**Online Retail II** — UCI Machine Learning Repository (ID 502).
+**Online Retail II** - UCI Machine Learning Repository (ID 502).
 - URL: https://archive.ics.uci.edu/dataset/502/online+retail+ii
 - Download (verified reachable, HTTP 200):
   `https://archive.ics.uci.edu/static/public/502/online+retail+ii.zip`
 - Real transaction-level data from a UK-based online **wholesale** retailer,
-  **Dec 2009 – Dec 2011**. Delivered as one `.xlsx` with two sheets
+  **Dec 2009 - Dec 2011**. Delivered as one `.xlsx` with two sheets
   (`Year 2009-2010`, `Year 2010-2011`), ~1.07M rows combined.
 - Columns: `Invoice`, `StockCode`, `Description`, `Quantity`, `InvoiceDate`,
   `Price`, `Customer ID`, `Country`.
 
 **Why it fits:** it is genuinely messy in exactly the ways a governance project
-should surface — cancellation invoices (`C` prefix) with negative quantities,
+should surface - cancellation invoices (`C` prefix) with negative quantities,
 missing `Customer ID`s, non-product stock codes (POST, BANK CHARGES, M, D,
 samples, test codes), zero/negative prices, duplicate line items, and price/qty
 outliers. It has a two-year date range, so failure-rate trends are meaningful.
 
-## 3. Rule catalog — YAML schema design
+## 3. Rule catalog - YAML schema design
 
 `rules/rule_catalog.yaml`. One list of rule entries; each entry is fully
 self-describing so the engine never hard-codes rule logic.
@@ -64,7 +64,7 @@ rules:
 Contract the engine relies on (so YAML is the single source of truth):
 - Every rule's `sql` is a `SELECT` returning at least `rowid` for failing rows.
 - `handling` ∈ {`exclude`, `flag`, `keep_with_note`}; `flag` requires a
-  `flag_column` name. The engine reads these — it does not decide them.
+  `flag_column` name. The engine reads these - it does not decide them.
 - Adding a rule = appending one YAML entry. No Python change. (Proven by a test.)
 
 **Rules to implement (minimum set from the spec):**
@@ -98,12 +98,12 @@ issue log and reconciliation report the relationship between them (question 1).
   note only (used for outliers, which we surface but do not silently delete).
 
 Curated outputs (committed, small):
-- `data/curated/transactions.csv` — cleaned line items + flag columns + a derived
+- `data/curated/transactions.csv` - cleaned line items + flag columns + a derived
   `revenue = Quantity * Price` column.
-- `data/curated/rule_results.csv` — per-rule id, name, severity, handling,
+- `data/curated/rule_results.csv` - per-rule id, name, severity, handling,
   failure count, failure rate, example failing rowids.
-- `data/curated/reconciliation.csv` — raw vs curated headline numbers.
-- `data/curated/failure_trend.csv` — monthly failure rate per rule (for the
+- `data/curated/reconciliation.csv` - raw vs curated headline numbers.
+- `data/curated/failure_trend.csv` - monthly failure rate per rule (for the
   dashboard trend).
 
 ## 5. Reconciliation approach
@@ -124,11 +124,11 @@ Internal-consistency identity that a test enforces: for exclude rules,
 `src/build_dashboard.py` → `docs_site/index.html`, one self-contained Plotly HTML
 file, all data precomputed and embedded, opens as a local file with no server.
 Sections:
-1. **Scorecard** — bar of failure rate per rule, colored by severity
+1. **Scorecard** - bar of failure rate per rule, colored by severity
    (critical vs warning), with pass/fail counts in hover.
-2. **Reconciliation** — before/after grouped bars (revenue, orders, customers,
+2. **Reconciliation** - before/after grouped bars (revenue, orders, customers,
    line items) with the % change labeled.
-3. **Trend** — monthly failure rate per rule over the 2-year range.
+3. **Trend** - monthly failure rate per rule over the 2-year range.
 Embedded data is summarized (per-rule totals, monthly aggregates), not raw rows.
 Published via GitHub Pages: `main` branch, `/docs_site` folder.
 

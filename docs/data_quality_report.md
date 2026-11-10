@@ -1,4 +1,4 @@
-# Data Quality Report — Sales_Data_Quality_Scorecard
+# Data Quality Report - Sales_Data_Quality_Scorecard
 
 Factual profile of the raw `transactions` table (both yearly sheets combined),
 computed directly from the loaded data.

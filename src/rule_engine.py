@@ -22,6 +22,15 @@ logger = logging.getLogger("rule_engine")
 # Number of failing rowids retained as examples in the result summary.
 EXAMPLE_LIMIT = 10
 
+# Allowed values for a rule's ``handling`` field.
+VALID_HANDLING = frozenset({"exclude", "flag", "keep_with_note"})
+
+# Keys every rule entry must define.
+REQUIRED_RULE_KEYS = ("id", "name", "dimension", "severity", "handling", "sql")
+
+# Handling values that require a ``flag_column`` to be named.
+FLAG_COLUMN_HANDLING = frozenset({"flag", "keep_with_note"})
+
 
 @dataclass
 class RuleResult:
@@ -43,17 +52,62 @@ class RuleResult:
         return self.failing_rowids[:EXAMPLE_LIMIT]
 
 
+def validate_catalog(catalog: dict[str, Any]) -> None:
+    """Validate the catalog's structure so bad rules fail fast and clearly.
+
+    Every rule must define the required keys, declare a ``handling`` from the
+    allowed set, and (when ``handling`` is ``flag`` or ``keep_with_note``) name a
+    ``flag_column``.
+
+    Args:
+        catalog: The parsed catalog dictionary.
+
+    Raises:
+        ValueError: If the catalog or any rule is malformed.
+    """
+    rules = catalog.get("rules")
+    if not isinstance(rules, list) or not rules:
+        raise ValueError("Catalog must contain a non-empty 'rules' list.")
+
+    for index, rule in enumerate(rules):
+        if not isinstance(rule, dict):
+            raise ValueError(f"Rule at position {index} is not a mapping.")
+        label = rule.get("id", f"<position {index}>")
+
+        missing = [key for key in REQUIRED_RULE_KEYS if not rule.get(key)]
+        if missing:
+            raise ValueError(f"Rule {label} is missing required key(s): {', '.join(missing)}")
+
+        handling = rule["handling"]
+        # Guard non-string/non-hashable handling so membership tests raise a
+        # clear ValueError rather than a TypeError.
+        if not isinstance(handling, str) or handling not in VALID_HANDLING:
+            raise ValueError(
+                f"Rule {label} has invalid handling {handling!r}; "
+                f"must be one of {sorted(VALID_HANDLING)}."
+            )
+
+        if handling in FLAG_COLUMN_HANDLING and not rule.get("flag_column"):
+            raise ValueError(
+                f"Rule {label} has handling {handling!r} but no 'flag_column' is defined."
+            )
+
+
 def load_catalog(catalog_path: Path) -> dict[str, Any]:
-    """Load and parse the YAML rule catalog.
+    """Load, parse and validate the YAML rule catalog.
 
     Args:
         catalog_path: Path to the rule catalog YAML.
 
     Returns:
         The parsed catalog dictionary (``meta`` and ``rules``).
+
+    Raises:
+        ValueError: If the catalog or any rule is malformed.
     """
     with catalog_path.open("r", encoding="utf-8") as handle:
         catalog: dict[str, Any] = yaml.safe_load(handle)
+    validate_catalog(catalog)
     return catalog
 
 

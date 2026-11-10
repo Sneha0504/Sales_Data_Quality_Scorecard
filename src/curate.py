@@ -131,7 +131,12 @@ def build_failure_trend_frame(
 
 
 def write_transactions(
-    curated: pd.DataFrame, curated_dir: Path, filename: str, max_mb: float, period: str
+    curated: pd.DataFrame,
+    curated_dir: Path,
+    filename: str,
+    max_mb: float,
+    period: str,
+    summary_filename: str,
 ) -> None:
     """Write curated transactions, compressing and summarising if oversized.
 
@@ -143,6 +148,7 @@ def write_transactions(
         filename: Base CSV filename from config.
         max_mb: Size threshold (MB) above which the CSV is gzip-compressed.
         period: Period alias for the aggregated monthly summary.
+        summary_filename: Filename for the aggregated monthly summary (from config).
     """
     output = curated.drop(columns=["rowid"])
     csv_path = curated_dir / filename
@@ -172,7 +178,7 @@ def write_transactions(
             .reset_index()
             .rename(columns={"_month": "month"})
         )
-        summary_path = curated_dir / "transactions_monthly_summary.csv"
+        summary_path = curated_dir / summary_filename
         summary.to_csv(summary_path, index=False)
         logger.info("Wrote aggregated monthly summary: %s", summary_path)
 
@@ -215,6 +221,7 @@ def main() -> None:
         outputs["transactions_csv"],
         float(outputs["transactions_csv_max_mb"]),
         curate_cfg["trend_period"],
+        outputs["transactions_monthly_summary_csv"],
     )
 
     # Reconciliation (also verifies the internal identity).

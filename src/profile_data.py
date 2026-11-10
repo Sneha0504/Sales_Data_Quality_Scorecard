@@ -103,7 +103,7 @@ def _rule_results_section(rule_results_csv: Path) -> str:
     if not rule_results_csv.exists():
         return (
             "## Rule results\n\n"
-            "_Placeholder — run `make rules` / `make curate` to populate this "
+            "_Placeholder - run `make rules` / `make curate` to populate this "
             "section from `data/curated/rule_results.csv`._\n"
         )
     results = pd.read_csv(rule_results_csv)
@@ -140,7 +140,7 @@ def write_report(metrics: dict[str, Any], report_path: Path, rule_results_csv: P
         f"| {country} | {count:,} |" for country, count in metrics["country_counts"].items()
     )
 
-    body = f"""# Data Quality Report — Sales_Data_Quality_Scorecard
+    body = f"""# Data Quality Report - Sales_Data_Quality_Scorecard
 
 Factual profile of the raw `transactions` table (both yearly sheets combined),
 computed directly from the loaded data.

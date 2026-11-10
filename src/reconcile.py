@@ -48,10 +48,13 @@ def _load_curated(curated_dir: Path, filename: str) -> pd.DataFrame:
     """Load the curated transactions CSV, preferring a gzip variant if present."""
     csv_path = curated_dir / filename
     gz_path = csv_path.with_suffix(csv_path.suffix + ".gz")
+    # Invoice/StockCode are mixed alphanumeric codes; pin them to str so the
+    # standalone read does not raise a DtypeWarning on the chunked parse.
+    dtypes = {"Invoice": str, "StockCode": str}
     if csv_path.exists():
-        return pd.read_csv(csv_path)
+        return pd.read_csv(csv_path, dtype=dtypes)
     if gz_path.exists():
-        return pd.read_csv(gz_path, compression="gzip")
+        return pd.read_csv(gz_path, compression="gzip", dtype=dtypes)
     raise FileNotFoundError(f"No curated transactions file at {csv_path} or {gz_path}")
 
 
