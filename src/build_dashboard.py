@@ -81,6 +81,9 @@ def build_scorecard(rule_results: pd.DataFrame, total_rows: int) -> go.Figure:
             orientation="h",
             marker_color=colors,
             customdata=customdata,
+            # The real data bar carries per-bar severity colors; the legend is
+            # provided by the dedicated dummy traces below, so hide this one.
+            showlegend=False,
             hovertemplate=(
                 "<b>%{y}</b><br>"
                 "Failure rate: %{x:.3f}%<br>"
@@ -91,7 +94,7 @@ def build_scorecard(rule_results: pd.DataFrame, total_rows: int) -> go.Figure:
             ),
         )
     )
-    # Manual legend entries for the two severities.
+    # One named, color-matched legend entry per severity (and nothing else).
     for severity, color in SEVERITY_COLORS.items():
         fig.add_trace(
             go.Bar(
@@ -147,21 +150,27 @@ def build_reconciliation(reconciliation: pd.DataFrame) -> go.Figure:
             row=1,
             col=col,
         )
+        # Headroom above the tallest bar so the % label sits in clear space,
+        # below the subplot title and above the bars (no collision).
+        y_max = max(float(row["raw"]), float(row["curated"]))
+        fig.update_yaxes(range=[0, y_max * 1.32], row=1, col=col)
         fig.add_annotation(
-            text=f"{pct:+.2f}%",
+            text=f"<b>{pct:+.2f}%</b>",
             xref=f"x{col} domain" if col > 1 else "x domain",
             yref=f"y{col} domain" if col > 1 else "y domain",
             x=0.5,
-            y=1.08,
+            y=0.95,
+            yanchor="top",
             showarrow=False,
             font=dict(size=13, color="#2c3e50"),
+            bgcolor="rgba(255,255,255,0.75)",
         )
 
     fig.update_layout(
         title="Reconciliation: raw vs curated headline metrics (% change labeled)",
         template="plotly_white",
-        height=420,
-        margin=dict(l=50, r=40, t=90, b=50),
+        height=430,
+        margin=dict(l=55, r=40, t=100, b=50),
     )
     return fig
 
@@ -214,8 +223,10 @@ def render_html(figures: list[go.Figure], output_path: Path) -> None:
         output_path: Destination HTML file.
     """
     blocks: list[str] = []
+    heights: list[int] = []
     for index, fig in enumerate(figures):
         include = "inline" if index == 0 else False
+        heights.append(int(fig.layout.height or 460))
         blocks.append(
             pio.to_html(fig, full_html=False, include_plotlyjs=include, config={"responsive": True})
         )
@@ -232,7 +243,8 @@ def render_html(figures: list[go.Figure], output_path: Path) -> None:
   header {{ max-width: 1100px; margin: 0 auto; padding: 28px 0 8px; }}
   h1 {{ font-size: 1.6rem; margin: 0 0 6px; }}
   p.lead {{ color: #5d6d7e; margin: 0 0 8px; }}
-  section {{ max-width: 1100px; margin: 0 auto 28px; }}
+  section {{ max-width: 1100px; margin: 0 auto 24px; }}
+  section .plotly-graph-div {{ width: 100%; height: 100%; }}
   footer {{ max-width: 1100px; margin: 24px auto 0; color: #85929e; font-size: 0.85rem;
            border-top: 1px solid #ececec; padding-top: 12px; }}
 </style>
@@ -244,9 +256,9 @@ def render_html(figures: list[go.Figure], output_path: Path) -> None:
   transaction dataset (UCI ML Repository), Dec 2009 to Dec 2011. All figures are
   precomputed from the curated data layer.</p>
 </header>
-<section>{blocks[0]}</section>
-<section>{blocks[1]}</section>
-<section>{blocks[2]}</section>
+<section style="height:{heights[0]}px">{blocks[0]}</section>
+<section style="height:{heights[1]}px">{blocks[1]}</section>
+<section style="height:{heights[2]}px">{blocks[2]}</section>
 <footer>
   Scorecard shows the share of raw rows failing each rule. Reconciliation compares
   raw vs curated headline numbers. Trend shows monthly failure rates across the
