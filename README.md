@@ -9,12 +9,10 @@ using the curated data can trust it and see exactly what was done to it and why.
 ## Live dashboard
 
 https://sneha0504.github.io/Sales_Data_Quality_Scorecard/
-<!-- PAGES_URL -->
 
 ## Dashboard preview
 
 ![Dashboard screenshot](docs/dashboard_screenshot.png)
-<!-- SCREENSHOT -->
 
 ## Key findings
 
@@ -69,6 +67,7 @@ Other targets: `make load`, `make rules`, `make curate`, `make reconcile`,
 ## Data source
 
 - **Online Retail II**, UCI Machine Learning Repository.
+- Creator: Daqing Chen (2019).
 - Page: https://archive.ics.uci.edu/dataset/502/online+retail+ii
 - License: Creative Commons Attribution 4.0 International (CC BY 4.0).
 
