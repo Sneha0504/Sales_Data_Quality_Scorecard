@@ -1,0 +1,143 @@
+meta:
+  dataset: online_retail_ii
+  table: transactions          # table every rule's SQL runs against
+  version: 1
+
+# Each rule is fully self-describing: the engine runs `sql` generically and
+# reads `handling`/`flag_column` without knowing any rule id. Adding a rule is
+# appending one entry here; no Python change is required.
+#
+# Contract:
+#   * `sql` is a SELECT returning at least `rowid` for the FAILING rows.
+#   * `handling` is one of exclude | flag | keep_with_note.
+#   * `flag_column` is required for `flag` and `keep_with_note` rules (the
+#     column curate.py sets to 1 on matching rows).
+#   * `params` (optional) are substituted into `sql` via named `{placeholders}`,
+#     so numeric thresholds are documented and tunable here without code edits.
+#
+# Outlier thresholds (R008/R009) are the 99.9th percentile of the raw data,
+# derived in the profiling step. A plain IQR fence was rejected: on this
+# heavily right-skewed wholesale data it flags >5% of rows, which is not
+# "extreme". The 99.9th percentile isolates genuinely extreme magnitudes.
+
+rules:
+  - id: R001
+    name: missing_customer_id
+    description: Customer ID is null/blank; the line cannot be attributed to a customer.
+    dimension: completeness
+    severity: critical
+    handling: flag
+    rationale: Kept for revenue totals but flagged; many are valid guest/B2B sales.
+    flag_column: is_missing_customer_id
+    sql: |
+      SELECT rowid FROM transactions
+      WHERE "Customer ID" IS NULL
+         OR TRIM(CAST("Customer ID" AS TEXT)) = ''
+
+  - id: R002
+    name: cancelled_order
+    description: Invoice number starts with 'C', marking a cancellation/return.
+    dimension: validity
+    severity: critical
+    handling: exclude
+    rationale: Cancellations reverse prior sales; excluded so curated revenue reflects net kept sales.
+    sql: |
+      SELECT rowid FROM transactions
+      WHERE CAST(Invoice AS TEXT) LIKE 'C%'
+
+  - id: R003
+    name: non_positive_quantity
+    description: Quantity is zero or negative (returns, write-offs, adjustments).
+    dimension: validity
+    severity: critical
+    handling: exclude
+    rationale: A sold line item must have a positive quantity; non-positive lines are not sales.
+    sql: |
+      SELECT rowid FROM transactions
+      WHERE Quantity <= 0
+
+  - id: R004
+    name: non_positive_price
+    description: Unit price is zero or negative (adjustments, bad debt, manual corrections).
+    dimension: validity
+    severity: critical
+    handling: exclude
+    rationale: A valid sale must carry a positive unit price; non-positive prices are not sales.
+    sql: |
+      SELECT rowid FROM transactions
+      WHERE Price <= 0
+
+  - id: R005
+    name: non_product_stock_code
+    description: >-
+      StockCode is not a standard 5-digit product code (postage, bank charges,
+      manual, discount, samples, gift, test and other administrative codes).
+    dimension: validity
+    severity: warning
+    handling: flag
+    rationale: Administrative/non-product lines are legitimate but should be excludable from product analysis.
+    flag_column: is_non_product_stock_code
+    sql: |
+      SELECT rowid FROM transactions
+      WHERE CAST(StockCode AS TEXT) NOT GLOB '[0-9][0-9][0-9][0-9][0-9]*'
+
+  - id: R006
+    name: duplicate_line_item
+    description: Exact duplicate line item (same Invoice, StockCode, Quantity and Price).
+    dimension: uniqueness
+    severity: warning
+    handling: flag
+    rationale: Possible double-entry; flagged for review rather than dropped, as some repeats are genuine.
+    flag_column: is_duplicate_line_item
+    sql: |
+      SELECT rowid FROM transactions
+      WHERE CAST(Invoice AS TEXT) || '|' || CAST(StockCode AS TEXT) || '|'
+            || CAST(Quantity AS TEXT) || '|' || CAST(Price AS TEXT) IN (
+        SELECT CAST(Invoice AS TEXT) || '|' || CAST(StockCode AS TEXT) || '|'
+               || CAST(Quantity AS TEXT) || '|' || CAST(Price AS TEXT)
+        FROM transactions
+        GROUP BY Invoice, StockCode, Quantity, Price
+        HAVING COUNT(*) > 1
+      )
+
+  - id: R007
+    name: country_blank_or_unspecified
+    description: Country is null, blank, or the catch-all 'Unspecified'.
+    dimension: consistency
+    severity: warning
+    handling: flag
+    rationale: Geography is used for segmentation; unknown origin is flagged, not dropped.
+    flag_column: is_country_unspecified
+    sql: |
+      SELECT rowid FROM transactions
+      WHERE Country IS NULL
+         OR TRIM(CAST(Country AS TEXT)) = ''
+         OR Country = 'Unspecified'
+
+  - id: R008
+    name: quantity_extreme_outlier
+    description: Absolute quantity exceeds the 99.9th-percentile extreme-outlier threshold.
+    dimension: accuracy
+    severity: warning
+    handling: keep_with_note
+    rationale: Extreme quantities may be data-entry errors or bulk B2B orders; surfaced with a note, never dropped.
+    flag_column: note_quantity_outlier
+    params:
+      quantity_threshold: 600       # 99.9th percentile of |Quantity| from profiling
+    sql: |
+      SELECT rowid FROM transactions
+      WHERE ABS(Quantity) > {quantity_threshold}
+
+  - id: R009
+    name: price_extreme_outlier
+    description: Unit price exceeds the 99.9th-percentile extreme-outlier threshold.
+    dimension: accuracy
+    severity: warning
+    handling: keep_with_note
+    rationale: Extreme prices may be errors or genuine high-value items; surfaced with a note, never dropped.
+    flag_column: note_price_outlier
+    params:
+      price_threshold: 217          # 99.9th percentile of Price from profiling
+    sql: |
+      SELECT rowid FROM transactions
+      WHERE Price > {price_threshold}

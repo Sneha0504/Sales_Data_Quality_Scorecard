@@ -1,0 +1,10 @@
+id,name,dimension,severity,handling,flag_column,failure_count,failure_rate,attributed_exclusions,example_failing_rowids
+R001,missing_customer_id,completeness,critical,flag,is_missing_customer_id,243007,0.22766872999172733,0,264;284;285;471;578;579;1056;1057;1058;1059
+R002,cancelled_order,validity,critical,exclude,,19494,0.018263565339511754,19494,179;180;181;182;183;184;185;186;187;197
+R003,non_positive_quantity,validity,critical,exclude,,22950,0.021501427338760374,3457,179;180;181;182;183;184;185;186;187;197
+R004,non_positive_price,validity,critical,exclude,,6207,0.005815222635803296,2750,264;284;285;471;3115;3162;3163;3169;3732;4297
+R005,non_product_stock_code,validity,warning,flag,is_non_product_stock_code,6093,0.005708418160133637,0,90;127;174;626;736;737;928;1245;2378;2379
+R006,duplicate_line_item,uniqueness,warning,flag,is_duplicate_line_item,67250,0.0630052718314438,0,363;364;366;368;369;372;380;384;385;386
+R007,country_blank_or_unspecified,consistency,warning,flag,is_country_unspecified,756,0.0007082823123356358,0,61395;61396;61397;61398;61399;61400;61401;61402;61403;61404
+R008,quantity_extreme_outlier,accuracy,warning,keep_with_note,note_quantity_outlier,941,0.0008816053649574516,0,576;3163;4297;4539;6556;6557;6912;7206;7303;7304
+R009,price_extreme_outlier,accuracy,warning,keep_with_note,note_price_outlier,1068,0.001000589298378914,0,2380;5064;5408;8375;9308;9702;16428;17267;17274;19096

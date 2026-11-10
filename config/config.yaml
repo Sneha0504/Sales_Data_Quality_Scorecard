@@ -1,0 +1,48 @@
+# Central configuration for the Sales_Data_Quality_Scorecard pipeline.
+# Every path and setting lives here; no Python module hard-codes paths.
+# All paths are relative to the project root (the directory that contains this
+# config's parent `config/` folder) unless given as absolute.
+
+paths:
+  raw_xlsx: data/raw/online_retail_II.xlsx
+  warehouse_db: data/warehouse.db
+  curated_dir: data/curated
+  rule_catalog: rules/rule_catalog.yaml
+  data_quality_report: docs/data_quality_report.md
+
+load:
+  sheet_names:
+    - "Year 2009-2010"
+    - "Year 2010-2011"
+  table: transactions
+  # Column that carries the originating sheet label (added at load time).
+  source_sheet_column: source_sheet
+
+curate:
+  revenue_column: revenue
+  # Precedence used to attribute a row removed by more than one `exclude` rule
+  # to exactly one rule, so the reconciliation identity holds. Rules are tried
+  # in this order; the first matching exclude rule owns the exclusion.
+  exclude_precedence:
+    - R002
+    - R003
+    - R004
+  # Monthly failure-trend granularity (pandas period alias).
+  trend_period: M
+
+outputs:
+  transactions_csv: transactions.csv
+  rule_results_csv: rule_results.csv
+  reconciliation_csv: reconciliation.csv
+  failure_trend_csv: failure_trend.csv
+  # If the uncovered transactions.csv exceeds this size (megabytes) it is written
+  # gzip-compressed instead, alongside a small aggregated monthly summary.
+  transactions_csv_max_mb: 50
+
+reconcile:
+  # Absolute float tolerance for the internal reconciliation identity checks.
+  float_tolerance: 0.01
+
+logging:
+  level: INFO
+  format: "%(asctime)s %(levelname)s %(name)s %(message)s"
